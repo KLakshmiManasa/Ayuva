@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ayuva</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI';
+    background: linear-gradient(180deg, #5f5bff, #6a11cb);
+    color: white;
+}
+
+.screen { display: none; padding: 20px; }
+.active { display: block; }
+
+#splash {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.card {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 15px;
+    margin-top: 15px;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: none;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: #00e6a8;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 15px;
+}
+
+.tab { padding: 10px; cursor: pointer; }
+.tab.activeTab { border-bottom: 2px solid white; }
+
+.tabContent { display: none; }
+.tabContent.active { display: block; }
+
+.low { color: #00ff9d; }
+.moderate { color: #ffd166; }
+.high { color: #ff4d6d; }
+
+.body {
+    font-size: 80px;
+    text-align: center;
+}
+
+/* GAUGE */
+#gaugeCanvas {
+    display: block;
+    margin: auto;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+    <img src="Ayuva.jpeg" width="200">
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="screen">
+    <div class="card">
+        <input id="username" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="signup()">Signup</button>
+        <p id="authMsg"></p>
+    </div>
+</div>
+
+<!-- INPUT -->
+<div id="screen1" class="screen">
+    <div class="card">
+        <input id="age" placeholder="Age">
+
+        <label>Fatigue?</label>
+        <select id="fatigue"><option>No</option><option>Yes</option></select>
+
+        <label>Chest Pain?</label>
+        <select id="chest"><option>No</option><option>Yes</option></select>
+
+        <label>Thirst?</label>
+        <select id="thirst"><option>No</option><option>Yes</option></select>
+
+        <label>Abdominal Pain?</label>
+        <select id="pain"><option>No</option><option>Yes</option></select>
+
+        <button onclick="predict()">Check Health</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<!-- RESULT -->
+<div id="screen2" class="screen">
+
+    <div class="tabs">
+        <div class="tab activeTab" onclick="openTab(event,'summary')">Summary</div>
+        <div class="tab" onclick="openTab(event,'risk')">Risk</div>
+        <div class="tab" onclick="openTab(event,'body')">Body</div>
+        <div class="tab" onclick="openTab(event,'dict')">Dictionary</div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div id="summary" class="tabContent active">
+        <div class="card">
+            <h3>Health Score: <span id="score"></span></h3>
+        </div>
+    </div>
+
+    <!-- RISK -->
+    <div id="risk" class="tabContent">
+        <div class="card">
+            <h3>Risk Speedometer</h3>
+            <canvas id="gaugeCanvas" width="300" height="200"></canvas>
+
+            <p>🩸 Diabetes: <span id="diab"></span></p>
+            <p>❤️ Heart: <span id="heart"></span></p>
+            <p>🧪 Liver: <span id="liver"></span></p>
+        </div>
+    </div>
+
+    <!-- BODY -->
+    <div id="body" class="tabContent">
+        <div class="card">
+            <div id="bodyMap" class="body">🧍</div>
+        </div>
+    </div>
+
+    <!-- DICTIONARY -->
+    <div id="dict" class="tabContent">
+        <div class="card">
+            <input id="search" placeholder="Search term">
+            <button onclick="searchWord()">Search</button>
+            <p id="meaning"></p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+setTimeout(() => {
+    splash.style.display = "none";
+    loginScreen.classList.add("active");
+}, 2000);
+
+let token = "";
+
+/* LOGIN */
+async function login() {
+    let res = await fetch("http://127.0.0.1:8000/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: username.value,
+            password: password.value
+        })
+    });
+    let r = await res.json();
+    token = r.token;
+
+    loginScreen.classList.remove("active");
+    screen1.classList.add("active");
+}
+
+/* LOGOUT */
+function logout() {
+    token = "";
+    screen1.classList.remove("active");
+    screen2.classList.remove("active");
+    loginScreen.classList.add("active");
+}
+
+/* SYMPTOMS */
+function generateSymptoms() {
+    let s = [];
+    if (fatigue.value === "Yes") s.push("fatigue");
+    if (chest.value === "Yes") s.push("chest pain");
+    if (thirst.value === "Yes") s.push("excessive thirst");
+    if (pain.value === "Yes") s.push("abdominal pain");
+    return s;
+}
+
+/* GAUGE DRAW */
+function drawGauge(value) {
+    const canvas = document.getElementById("gaugeCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let current = 0;
+
+    function animate() {
+        ctx.clearRect(0,0,300,200);
+
+        // arc colors
+        let start = Math.PI;
+        let end = 0;
+
+        let gradient = ctx.createLinearGradient(0,0,300,0);
+        gradient.addColorStop(0, "green");
+        gradient.addColorStop(0.5, "yellow");
+        gradient.addColorStop(1, "red");
+
+        ctx.beginPath();
+        ctx.lineWidth = 20;
+        ctx.strokeStyle = gradient;
+        ctx.arc(150,150,100,start,end);
+        ctx.stroke();
+
+        // numbers
+        ctx.fillStyle = "white";
+        ctx.font = "12px Arial";
+        [0,25,50,75,100].forEach(n=>{
+            let angle = Math.PI + (n/100)*Math.PI;
+            let x = 150 + Math.cos(angle)*110;
+            let y = 150 + Math.sin(angle)*110;
+            ctx.fillText(n, x-10, y);
+        });
+
+        // needle
+        let angle = Math.PI + (current/100)*Math.PI;
+        let x = 150 + Math.cos(angle)*80;
+        let y = 150 + Math.sin(angle)*80;
+
+        ctx.beginPath();
+        ctx.moveTo(150,150);
+        ctx.lineTo(x,y);
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        if (current < value) {
+            current += 1;
+            requestAnimationFrame(animate);
+        }
+    }
+
+    animate();
+}
+
+/* PREDICT */
+async function predict() {
+
+    let ageVal = parseInt(age.value) || 30;
+
+    let data = {
+        symptoms: generateSymptoms(),
+
+        Pregnancies: 1,
+        Glucose: 120,
+        BloodPressure: 80,
+        SkinThickness: 20,
+        Insulin: 85,
+        BMI: 25,
+        DiabetesPedigreeFunction: 0.5,
+        Age: ageVal,
+
+        male: 1,
+        age: ageVal,
+        education: 1,
+        currentSmoker: 0,
+        cigsPerDay: 0,
+        BPMeds: 0,
+        prevalentStroke: 0,
+        prevalentHyp: 0,
+        diabetes: 0,
+        totChol: 180,
+        sysBP: 120,
+        diaBP: 80,
+        BMI: 25,
+        heartRate: 75,
+        glucose: 120,
+
+        Gender: 1,
+        Total_Bilirubin: 1,
+        Direct_Bilirubin: 0.3,
+        Alkaline_Phosphatase: 200,
+        Alamine_Aminotransferase: 30,
+        Aspartate_Aminotransferase: 35,
+        Total_Proteins: 6.5,
+        Albumin: 3.5,
+        Albumin_and_Globulin_Ratio: 1
+    };
+
+    let res = await fetch("http://127.0.0.1:8000/predict_all", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify(data)
+    });
+
+    let r = await res.json();
+
+    screen1.classList.remove("active");
+    screen2.classList.add("active");
+
+    let avg = (r.diabetes_risk.confidence + r.heart_risk.confidence + r.liver_risk.confidence)/3;
+
+    document.getElementById("score").innerText = Math.round(100 - avg);
+
+    drawGauge(avg);
+
+    diab.innerText = r.diabetes_risk.level;
+    heart.innerText = r.heart_risk.level;
+    liver.innerText = r.liver_risk.level;
+}
+
+/* TABS */
+function openTab(evt, id) {
+    document.querySelectorAll(".tabContent").forEach(t => t.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("activeTab"));
+    evt.currentTarget.classList.add("activeTab");
+}
+
+/* DICTIONARY */
+const dict = {
+    glucose: "Blood sugar level",
+    bmi: "Body mass index",
+    cholesterol: "Fat in blood"
+};
+
+function searchWord() {
+    let word = search.value.toLowerCase();
+    meaning.innerText = dict[word] || "Not found";
+}
+
+</script>
+
+</body>
+</html>
