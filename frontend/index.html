@@ -174,7 +174,7 @@ let token = "";
 
 /* LOGIN */
 async function login() {
-    let res = await fetch("http://127.0.0.1:8000/login", {
+    let res = await fetch("https://ayuva.onrender.com/login", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -307,7 +307,7 @@ async function predict() {
         Albumin_and_Globulin_Ratio: 1
     };
 
-    let res = await fetch("http://127.0.0.1:8000/predict_all", {
+    let res = await fetch("https://ayuva.onrender.com/predict_all", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
