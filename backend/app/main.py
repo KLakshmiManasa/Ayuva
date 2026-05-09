@@ -15,6 +15,9 @@ import shap
 # -----------------------------
 app = FastAPI()
 
+@app.get("/")
+def home():
+    return {"message": "Ayuva Backend is Running Successfully!"}
 # -----------------------------
 # CORS (for frontend)
 # -----------------------------
