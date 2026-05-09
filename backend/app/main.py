@@ -104,12 +104,37 @@ def login(data: AuthInput):
 # -----------------------------
 # LOAD MODELS
 # -----------------------------
-symptom_model = pickle.load(open("../models/disease_model.pkl", "rb"))
-ALL_SYMPTOMS = pickle.load(open("../models/symptoms.pkl", "rb"))
+import os
 
-diabetes_model = pickle.load(open("../models/diabetes_model.pkl", "rb"))
-heart_model = pickle.load(open("../models/heart_model.pkl", "rb"))
-liver_model = pickle.load(open("../models/liver_model.pkl", "rb"))
+# Current file: backend/app/main.py
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Project root: Ayuva/
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
+
+# Models directory: Ayuva/models/
+MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
+
+# Load models
+symptom_model = pickle.load(
+    open(os.path.join(MODELS_DIR, "symptoms.pkl"), "rb")
+)
+
+ALL_SYMPTOMS = pickle.load(
+    open(os.path.join(MODELS_DIR, "symptoms.pkl"), "rb")
+)
+
+diabetes_model = pickle.load(
+    open(os.path.join(MODELS_DIR, "diabetes_model.pkl"), "rb")
+)
+
+heart_model = pickle.load(
+    open(os.path.join(MODELS_DIR, "heart_model.pkl"), "rb")
+)
+
+liver_model = pickle.load(
+    open(os.path.join(MODELS_DIR, "liver_model.pkl"), "rb")
+)
 
 # -----------------------------
 # SHAP EXPLAINERS
